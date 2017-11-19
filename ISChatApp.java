@@ -23,8 +23,12 @@ public class ISChatApp extends JFrame implements ActionListener{
     /**
      * @param args the command line arguments
      */
+    // unique client id for each client
     static int clientId = 1;
+    // contains clients sockets
     static ClientObject[] sockets = new ClientObject[3];
+
+    //UI things 
     JPanel panel;
     JTextField client1_message,client2_message;
     JTextArea client1_chat,client2_chat,server_data;
@@ -43,9 +47,9 @@ public class ISChatApp extends JFrame implements ActionListener{
         
         this.setSize(1500, 800);
         this.setVisible(true);
-	setDefaultCloseOperation(EXIT_ON_CLOSE);
+	    setDefaultCloseOperation(EXIT_ON_CLOSE);
         panel.setLayout(null);
-	this.add(panel);
+	    this.add(panel);
         server_data.setBounds(250,10,1000,100);
         panel.add(server_data);
         client1_chat.setBounds(250,130,480,500);
@@ -68,8 +72,10 @@ public class ISChatApp extends JFrame implements ActionListener{
         
         
         Server server = new Server();
+        // Start server thread
         new Thread(server).start();
         
+        // Start clients threads
         new Thread(new Client(1)).start();
         new Thread(new Client(2)).start();
 
@@ -79,11 +85,14 @@ public class ISChatApp extends JFrame implements ActionListener{
         new ISChatApp();
     }
 
+    // Handling send buttons clicks
     public void actionPerformed(ActionEvent e) {
+        // if send button of client 1
         if ((e.getSource() == client1_send) && (client1_message.getText() != ""))
         {
             try
             {
+                // send the message to server then clear the textbox
                 sockets[1].getOut().writeUTF(client1_message.getText());
                 client1_message.setText("");
             }    
@@ -92,10 +101,12 @@ public class ISChatApp extends JFrame implements ActionListener{
                 System.out.println(ex);
             }
         }
+        // if send button of client 2
         if ((e.getSource() == client2_send) && (client2_message.getText() != ""))
         {
             try
             {
+                // send the message to server then clear the textbox
                 sockets[2].getOut().writeUTF(client2_message.getText());
                 client2_message.setText("");
             }    
@@ -109,15 +120,19 @@ public class ISChatApp extends JFrame implements ActionListener{
     
     public void run(){
         try{
+            // create server socket
             ServerSocket server = new ServerSocket(5050);
             server_data.append("Server Started at port 5050 \n");
             server_data.append("Waiting for clients ...  \n");
             
             while(true)
             {
+                // get newly connected  client socket
                 Socket client = server.accept(); 
+                // get ip of the client
                 InetAddress inetAddress = client.getInetAddress();
                 server_data.append("Client connected : "+ inetAddress.getHostAddress() + "\n");
+                // handle the client 
                 new Thread(new HandleClient(client)).start();
             }
         }
@@ -130,6 +145,7 @@ public class ISChatApp extends JFrame implements ActionListener{
     }
    
     class HandleClient implements Runnable {
+        // declared down, holds the socket,id,in,and output streams of the client
         private ClientObject co;
         
         public HandleClient(Socket socket)
@@ -142,13 +158,17 @@ public class ISChatApp extends JFrame implements ActionListener{
          {
              try
              {
+
                 DataInputStream in= new DataInputStream(co.getSocket().getInputStream());
+                // Send the id to the client
                 new DataOutputStream(co.getSocket().getOutputStream()).writeInt(co.getId());
                 while(true)
                 {
                     try
                     {
+                        // read a message from the user
                         String text = in.readUTF();
+                        // check the current client id and send the message to the other one
                         if(co.getId() == 1)
                         {
                             new DataOutputStream(sockets[2].getSocket().getOutputStream()).writeUTF(text);
@@ -183,14 +203,18 @@ public class ISChatApp extends JFrame implements ActionListener{
         {
             try
             {
+                // connect to the server at port 5050
                connection = new Socket(InetAddress.getLocalHost(), 5050);
                DataInputStream in = new DataInputStream(connection.getInputStream());
+               // read the id from the server
                this.id = in.readInt();
                while(true)
                {
                    try
                    {
+                       // read the message from the server
                        String text = in.readUTF();
+                       // check client id and print recieved message
                        if(id == 1)
                        {
                            client2_chat.append("> "+text +"\n");
